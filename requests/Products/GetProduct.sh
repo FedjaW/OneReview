@@ -1,6 +1,7 @@
 #!/bin/bash
 
 HOSTNAME="http://localhost:5026"
+productId="c47ba898-f298-413d-984a-39fe982f16de"
 
 curl -vs -X GET \
-        $HOSTNAME/products/f2b5cbdf-d140-4e1a-8e52-abca65aa8277
+        $HOSTNAME/products/$productId
