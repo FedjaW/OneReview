@@ -1,36 +1,73 @@
 using Microsoft.AspNetCore.Mvc;
+using OneReview.Domain;
+using OneReview.Services;
 
 namespace OneReview.Controllers;
 
+[ApiController]
 [Route("[controller]")] // = [Route("products")] => /products
-public class ProductsController : ControllerBase
+public class ProductsController(ProductsService productsService) : ControllerBase
 {
+    private readonly ProductsService _productsService = productsService;
+
     [HttpPost]
     public IActionResult Create(CreateProductRequest request)
     {
-        // create the product
+        // mapping to internal representation
+        var product = request.ToDomain();
 
-        // return 201 created response
+        // invoking the usecase
+        _productsService.Create(product);
+
+        // mapping to external representation
         return CreatedAtAction(
             // method
             actionName: nameof(Get),
             // parameters needed for this request
-            routeValues: new { ProductId = Guid.NewGuid() },
+            routeValues: new { ProductId = product.Id },
             // resource
-            value: request
+            value: ProductResponse.FromDomain(product)
         );
     }
 
     [HttpGet("{productId:guid}")]
     public IActionResult Get(Guid productId)
     {
-        // get the product
+        // invoking the usecase
+        var product = _productsService.Get(productId);
 
         // return 200 ok response
-        return Ok(
-        // resoruce
-        );
+        return product is null
+            ? Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                detail: $"Product not found (productId: {productId})"
+            )
+            : Ok(ProductResponse.FromDomain(product));
     }
 
-    public record CreateProductRequest(string Name, string Category, string SubCategory);
+    public record CreateProductRequest(string Name, string Category, string SubCategory)
+    {
+        public Product ToDomain()
+        {
+            return new Product
+            {
+                Name = Name,
+                Category = Category,
+                SubCategory = SubCategory
+            };
+        }
+    }
+
+    public record ProductResponse(Guid Id, string Name, string Category, string SubCategory)
+    {
+        public static ProductResponse FromDomain(Product product)
+        {
+            return new ProductResponse(
+                product.Id,
+                product.Name,
+                product.Category,
+                product.SubCategory
+            );
+        }
+    }
 }
